@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: food_delivery_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: food_delivery
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: food_delivery_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/gateway/Dockerfile
+    container_name: food_delivery_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - AUTH_SERVICE_URL=http://auth:8001
+      - RESTAURANT_SERVICE_URL=http://restaurant:8002
+      - ORDER_SERVICE_URL=http://order:8003
+      - PAYMENT_SERVICE_URL=http://payment:8004
+      - DELIVERY_SERVICE_URL=http://delivery:8005
+    depends_on:
+      - auth
+      - restaurant
+      - order
+      - payment
+      - delivery
+
+  auth:
+    build:
+      context: .
+      dockerfile: backend/services/auth-service/Dockerfile
+    container_name: food_delivery_auth
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/food_delivery?schema=public
+      - JWT_SECRET=jwtsecret_production_ready_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  restaurant:
+    build:
+      context: .
+      dockerfile: backend/services/restaurant-service/Dockerfile
+    container_name: food_delivery_restaurant
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/food_delivery?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  order:
+    build:
+      context: .
+      dockerfile: backend/services/order-service/Dockerfile
+    container_name: food_delivery_order
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/food_delivery?schema=public
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  payment:
+    build:
+      context: .
+      dockerfile: backend/services/payment-service/Dockerfile
+    container_name: food_delivery_payment
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/food_delivery?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  delivery:
+    build:
+      context: .
+      dockerfile: backend/services/delivery-service/Dockerfile
+    container_name: food_delivery_delivery
+    ports:
+      - "8005:8005"
+    environment:
+      - PORT=8005
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/food_delivery?schema=public
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: food_delivery_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+
+volumes:
+  pgdata:
+  redisdata:

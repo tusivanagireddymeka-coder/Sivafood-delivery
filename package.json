@@ -1,0 +1,32 @@
+{
+  "name": "food-delivery-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend/shared",
+    "backend/gateway",
+    "backend/services/*",
+    "frontend/*"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "build:shared": "npm run build -w backend/shared",
+    "dev:gateway": "npm run dev -w backend/gateway",
+    "dev:auth": "npm run dev -w backend/services/auth-service",
+    "dev:restaurant": "npm run dev -w backend/services/restaurant-service",
+    "dev:order": "npm run dev -w backend/services/order-service",
+    "dev:payment": "npm run dev -w backend/services/payment-service",
+    "dev:delivery": "npm run dev -w backend/services/delivery-service",
+    "dev:customer": "npm run dev -w frontend/customer-app",
+    "dev:restaurant-panel": "npm run dev -w frontend/restaurant-panel",
+    "dev:delivery-app": "npm run dev -w frontend/delivery-app",
+    "dev:admin": "npm run dev -w frontend/admin-dashboard",
+    "start:backend": "concurrently -n \"gateway,auth,restaurant,order,payment,delivery\" -c \"blue,green,magenta,yellow,cyan,gray\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:restaurant\" \"npm run dev:order\" \"npm run dev:payment\" \"npm run dev:delivery\"",
+    "start:frontend": "concurrently -n \"customer,restaurant-panel,delivery-app,admin\" -c \"blue,green,magenta,yellow\" \"npm run dev:customer\" \"npm run dev:restaurant-panel\" \"npm run dev:delivery-app\" \"npm run dev:admin\"",
+    "start:all": "concurrently -n \"backend,frontend\" -c \"green,blue\" \"npm run start:backend\" \"npm run start:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  }
+}
